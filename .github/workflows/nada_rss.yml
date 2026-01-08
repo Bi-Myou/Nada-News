@@ -1,0 +1,57 @@
+name: 智寶國際
+
+on:
+  workflow_dispatch: # 允許手動執行
+  schedule:
+    # 每小時的第 5 分鐘執行一次
+    - cron: '5 * * * *'
+
+permissions:
+  contents: write # 需要寫入權限來更新 rss.txt
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    env:
+      TZ: Asia/Taipei
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install requests beautifulsoup4 feedparser
+
+      - name: Run script
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN_WM }}
+          API_BASE_URL: ${{ secrets.TG_HOST }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          NADA_RSS: ${{ secrets.NADA_RSS }}
+          NADA_TOKEN: ${{ secrets.NADA_TOKEN }}
+          TROPIC_RSS: ${{ secrets.TROPIC_RSS }}
+          TROPIC_TOKEN: ${{ secrets.TROPIC_TOKEN }}
+          SHOEI_RSS: ${{ secrets.SHOEI_RSS }}
+          SHOEI_TOKEN: ${{ secrets.SHOEI_TOKEN }}
+        run: |
+          python nada-news.py
+
+      - name: Commit and Push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          # 檢查 rss.txt 是否有變動
+          if [[ -n $(git status -s rss.txt) ]]; then
+            git add rss.txt
+            git commit -m "[Actions] Auto update"
+            git push
+          else
+            echo "No changes to commit"
+          fi
